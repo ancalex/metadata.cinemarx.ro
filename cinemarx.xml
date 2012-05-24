@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?><scraper framework="11" date="2012-05-22" name="cinemarx.ro" content="movies" thumb="cinemarx.png" language="ro">
+﻿<?xml version="1.0" encoding="utf-8"?><scraper framework="11" date="2012-05-24" name="cinemarx.ro" content="movies" thumb="cinemarx.png" language="ro">
 	<CreateSearchUrl SearchStringEncoding="utf-8" clearbuffers="no" dest="3">
 		<!--movie search url on cinemarx.ro-->
 		<RegExp input="$$1" output="&lt;url&gt;http://www.cinemarx.ro/cauta/filme/\1&lt;/url&gt;" dest="3">
@@ -43,6 +43,10 @@
 				<RegExp input="$$1" output="\1" dest="4">
 					<expression>class="year"&gt;([^&lt;]*)</expression>
 				</RegExp>
+				<!--save year-->
+				<RegExp input="$$4" output="\1" dest="12">
+					<expression />
+				</RegExp>
 				<expression noclean="1" />
 			</RegExp>
 			<!--Runtime-->
@@ -54,8 +58,30 @@
 			</RegExp>
 			<!--Director-->
 			<RegExp input="$$4" output="&lt;director&gt;\1&lt;/director&gt;" dest="5+">
-				<RegExp input="$$1" output="\1" dest="4">
+				<RegExp input="$$1" output="=\1" dest="4">
 					<expression repeat="yes" noclean="1">title="Regizor:.([^"]*)</expression>
+				</RegExp>
+				<!--save director(s)-->
+				<RegExp input="$$4" output="\1 " dest="13">
+					<expression repeat="yes" noclean="1">=([^=]*)</expression>
+				</RegExp>
+				<expression repeat="yes" noclean="1">=([^=]*)</expression>
+			</RegExp>
+			<!--Distributia-->
+			<RegExp input="$$4" output="\1" dest="5+">
+				<!--save actor name and role-->
+				<RegExp input="$$1" output="\1:\3|" dest="14">
+					<expression repeat="yes" noclean="1">title="Actor:[^a-zA-z]*([^"]*)(.*?)br /&gt;([^&lt;]*)</expression>
+				</RegExp>
+				<RegExp input="$$1" output="&lt;url function=&quot;GetCinemarxActorThumbs&quot;&gt;http://www.cinemarx.ro/persoane/\1.html&lt;/url&gt;" dest="4">
+					<expression repeat="yes" noclean="1">class="m_ar"&gt;&lt;a href="/persoane/([^.]*)</expression>
+				</RegExp>
+				<expression noclean="1" />
+			</RegExp>
+			<!--IMDB search-->
+			<RegExp input="$$4" output="&lt;url function=&quot;GetIMDBRatingTMDBThumbnailFanart&quot;&gt;http://www.google.com/search?hl=en&amp;as_q=\1&amp;ft=i&amp;as_sitesearch=imdb.com&amp;as_qdr=all&amp;as_occt=any&amp;num=1&lt;/url&gt;" dest="5+">
+				<RegExp input="imdb/title $$11 $$12 $$13" output="\1" dest="4">
+					<expression noclean="1" encode="1" />
 				</RegExp>
 				<expression noclean="1" />
 			</RegExp>
@@ -73,20 +99,9 @@
 				</RegExp>
 				<expression noclean="1" />
 			</RegExp>
-			<!--Distributia-->
-			<RegExp input="$$4" output="\1" dest="5+">
-				<!--save actor name and role-->
-				<RegExp input="$$1" output="\1:\3|" dest="14">
-					<expression repeat="yes" noclean="1">title="Actor:[^a-zA-z]*([^"]*)(.*?)br /&gt;([^&lt;]*)</expression>
-				</RegExp>
-				<RegExp input="$$1" output="&lt;url function=&quot;GetCinemarxActorThumbs&quot;&gt;http://www.cinemarx.ro/persoane/\1.html&lt;/url&gt;" dest="4">
-					<expression repeat="yes" noclean="1">class="m_ar"&gt;&lt;a href="/persoane/([^.]*)</expression>
-				</RegExp>
-				<expression noclean="1" />
-			</RegExp>
 			<!--Thumbs Fanart-->
 			<RegExp input="$$4" output="\1" dest="5+">
-				<RegExp input="$$1" output="&lt;url function=&quot;GetThumbsFanart&quot;&gt;$$3?postere-alternative&lt;/url&gt;" dest="4">
+				<RegExp conditional="!tmdbthumbs" input="$$1" output="&lt;url function=&quot;GetCinemarxThumbs&quot;&gt;$$3?postere-alternative&lt;/url&gt;" dest="4">
 					<expression noclean="1" />
 				</RegExp>
 				<expression noclean="1" />
@@ -95,13 +110,34 @@
 			<RegExp input="$$4" output="&lt;plot&gt;\1&lt;/plot&gt;" dest="5+">
 				<!--sinopsis-->
 				<RegExp input="$$1" output="\1" dest="4">
-					<expression fixchars="1" trim="1">&lt;div class="article_content"[^&gt;]*.(.*?)&lt;/div&gt;</expression>
+					<expression trim="1">&lt;div class="article_content"[^&gt;]*.(.*?)&lt;/div&gt;</expression>
 				</RegExp>
 				<expression />
 			</RegExp>
 			<expression noclean="1" />
 		</RegExp>
 	</GetDetails>
+	<GetIMDBRatingTMDBThumbnailFanart clearbuffers="no" dest="5">
+		<RegExp input="$$4" output="&lt;details&gt;$$4&lt;/details&gt;" dest="5">
+			<!--save IMDB ID-->
+			<RegExp input="$$1" output="\1" dest="7">
+				<expression noclean="1">http://www.imdb.com/title/(tt[0-9]*)</expression>
+			</RegExp>
+			<!--rating from IMDB-->
+			<RegExp input="" output="&lt;chain function=&quot;GetIMDBRatingById&quot;&gt;$$7&lt;/chain&gt;" dest="4">
+				<expression />
+			</RegExp>
+			<!--thumbs from TMDB-->
+			<RegExp conditional="tmdbthumbs" input="" output="&lt;chain function=&quot;GetTMDBThumbsByIdChain&quot;&gt;$$7&lt;/chain&gt;" dest="4+">
+				<expression />
+			</RegExp>
+			<!--fanart from TMDB-->
+			<RegExp input="" output="&lt;chain function=&quot;GetTMDBFanartByIdChain&quot;&gt;$$7&lt;/chain&gt;" dest="4+">
+				<expression />
+			</RegExp>
+			<expression noclean="1" />
+		</RegExp>
+	</GetIMDBRatingTMDBThumbnailFanart>
 	<GetCinemarxActorThumbs clearbuffers="no" dest="10">
 		<RegExp input="$$9" output="&lt;details&gt;\1&lt;/details&gt;" dest="10">
 			<RegExp input="$$8" output="&lt;actor&gt;\1&lt;/actor&gt;" dest="9">
@@ -113,8 +149,8 @@
 				<RegExp input="$$14" output="&lt;name&gt;$$8&lt;/name&gt;&lt;role&gt;\1&lt;/role&gt;" dest="8">
 					<expression>$$8:([^|]*)</expression>
 				</RegExp>
-				<RegExp input="$$1" output="&lt;thumb&gt;\1&lt;/thumb&gt;" dest="8+">
-					<expression noclean="1">(http://static.cinemarx.ro/poze/cache/t33/[^"]*)</expression>
+				<RegExp input="$$1" output="$$8&lt;thumb&gt;\1&lt;/thumb&gt;" dest="8">
+					<expression>(http://static.cinemarx.ro/poze/cache/t33/[^"]*)</expression>
 				</RegExp>
 				<expression clear="yes" noclean="1" />
 			</RegExp>
@@ -122,21 +158,13 @@
 		</RegExp>
 	</GetCinemarxActorThumbs>
 	<!-- getting thumbs and fanarts -->
-	<GetThumbsFanart clearbuffers="no" dest="5">
+	<GetCinemarxThumbs clearbuffers="no" dest="5">
 		<RegExp input="$$4" output="&lt;details&gt;\1&lt;/details&gt;" dest="5">
 			<!--thumbs from cinemarx-->
-			<RegExp conditional="!tmdbthumbs" input="$$1" output="&lt;thumb&gt;\1&lt;/thumb&gt;" dest="4">
+			<RegExp input="$$1" output="&lt;thumb&gt;\1&lt;/thumb&gt;" dest="4">
 				<expression repeat="yes" noclean="1">href="(http://static.cinemarx.ro/poze/filme-mari/[^.]*.jpg)</expression>
-			</RegExp>
-			<!--thumbs from TMDB-->
-			<RegExp conditional="tmdbthumbs" input="$$15" output="&lt;url function=&quot;GetTMDBThumbsById&quot;&gt;http://www.imdb.com/title/tt\1&lt;/url&gt;" dest="4">
-				<expression />
-			</RegExp>
-			<!--fanart from TMDB-->
-			<RegExp input="$$15" output="&lt;url function=&quot;GetTMDBFanartById&quot;&gt;http://www.imdb.com/title/tt\1&lt;/url&gt;" dest="4+">
-				<expression />
 			</RegExp>
 			<expression noclean="1" />
 		</RegExp>
-	</GetThumbsFanart>
+	</GetCinemarxThumbs>
 </scraper>
